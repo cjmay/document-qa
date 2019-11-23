@@ -3,8 +3,8 @@ from typing import Optional, Union, List, Callable
 import numpy as np
 import tensorflow as tf
 from docqa.configurable import Configurable
-from tensorflow.contrib.keras import activations
-from tensorflow.contrib.keras import initializers
+from tensorflow.python.keras import activations
+from tensorflow.python.keras import initializers
 from tensorflow.python.layers.core import fully_connected
 
 from docqa.model import Prediction
