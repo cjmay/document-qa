@@ -5,6 +5,8 @@ from os.path import join
 import nltk
 import tensorflow as tf
 
+from docqa.config import LM_DIR, VEC_DIR
+
 from docqa.data_processing.qa_training_data import ParagraphAndQuestionDataset, ContextLenKey
 from docqa.data_processing.text_utils import NltkAndPunctTokenizer
 from docqa.data_processing.word_vectors import load_word_vector_file
@@ -21,29 +23,29 @@ Used to submit our official SQuAD scores via codalab
 
 def run():
     parser = argparse.ArgumentParser()
-    parser.add_argument("input_data")
-    parser.add_argument("output_data")
+    parser.add_argument("squad_path", help="path to squad dev data file")
+    parser.add_argument("output_path", help="path where evaluation json file will be written")
+    parser.add_argument("--model-path", default="model", help="path to model directory")
     parser.add_argument("--n", type=int, default=None)
     parser.add_argument("-b", "--batch_size", type=int, default=100)
     parser.add_argument("--ema", action="store_true")
     args = parser.parse_args()
 
-    input_data = args.input_data
-    output_path = args.output_data
-    model_dir = ModelDir("model")
+    squad_path = args.squad_path
+    output_path = args.output_path
+    model_dir = ModelDir(args.model_path)
     nltk.data.path.append("nltk_data")
 
     print("Loading data")
-    docs = parse_squad_data(input_data, "", NltkAndPunctTokenizer(), False)
+    docs = parse_squad_data(squad_path, "", NltkAndPunctTokenizer(), False)
     pairs = split_docs(docs)
     dataset = ParagraphAndQuestionDataset(pairs, ClusteredBatcher(args.batch_size, ContextLenKey(), False, True))
 
     print("Done, init model")
     model = model_dir.get_model()
-    # small hack, just load the vector file at its expected location rather then using the config location
-    loader = ResourceLoader(lambda a, b: load_word_vector_file("glove.840B.300d.txt", b))
+    loader = ResourceLoader(lambda a, b: load_word_vector_file(join(VEC_DIR, "glove.840B.300d.txt"), b))
     lm_model = model.lm_model
-    basedir = "lm"
+    basedir = join(LM_DIR, "squad-context-concat-skip")
     lm_model.lm_vocab_file = join(basedir, "squad_train_dev_all_unique_tokens.txt")
     lm_model.options_file = join(basedir, "options_squad_lm_2x4096_512_2048cnn_2xhighway_skip.json")
     lm_model.weight_file = join(basedir, "squad_context_concat_lm_2x4096_512_2048cnn_2xhighway_skip.hdf5")
